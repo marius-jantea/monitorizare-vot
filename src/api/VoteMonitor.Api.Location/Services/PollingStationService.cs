@@ -102,38 +102,5 @@ namespace VoteMonitor.Api.Location.Services
 
 			return data;
 		}
-
-		public async Task<int> ClearAll(CancellationToken cancellationToken)
-		{
-			try
-			{
-				int result = 0;
-				using (var transaction = await _context.Database.BeginTransactionAsync(cancellationToken))
-				{
-					//if there are any performance issues, DELETE can be changed to TRUNCATE - but then we need to tackle a way to 
-					//bypass foreign key relationship while removing data
-					await _context.Database.ExecuteSqlRawAsync($"DELETE FROM {nameof(_context.Answers)}"
-						, cancellationToken);
-					await _context.Database.ExecuteSqlRawAsync($"DELETE FROM {nameof(_context.Notes)}"
-						, cancellationToken);
-					await _context.Database.ExecuteSqlRawAsync($"DELETE FROM {nameof(_context.PollingStationInfos)}"
-						, cancellationToken);
-					await _context.Database.ExecuteSqlRawAsync($"UPDATE {nameof(_context.Counties)} SET {nameof(County.NumberOfPollingStations)} = 0"
-						, cancellationToken);
-					result = await _context.Database.ExecuteSqlRawAsync($"DELETE FROM {nameof(_context.PollingStations)}"
-						, cancellationToken);
-
-					await transaction.CommitAsync(cancellationToken);
-
-					return result;
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError("Error while removing polling stations.", ex);
-			}
-
-			return -1;
-		}
 	}
 }

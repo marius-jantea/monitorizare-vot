@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using VoteMonitor.Api.PollingStation.Commands;
 using VoteMonitor.Api.PollingStation.Models;
 using VoteMonitor.Api.PollingStation.Queries;
 
@@ -49,6 +50,19 @@ namespace VoteMonitor.Api.PollingStation.Controllers
             if (updated.HasValue && !updated.Value)
             {
                 return NotFound(id);
+            }
+
+            return Ok();
+        }
+
+        [HttpDelete("clearAll")]
+        public async Task<IActionResult> ClearAll()
+        {
+            var result = await _mediator.Send(new ClearAllPollingStationsCommand());
+
+            if (result == -1)
+            {
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
 
             return Ok();

@@ -116,19 +116,5 @@ namespace VoteMonitor.Api.Location.Controllers
 
 			return Ok();
 		}
-
-
-		[HttpDelete("clearAll")]
-		public async Task<IActionResult> ClearAll()
-		{
-			var result = await _mediator.Send(new ClearAllPollingStationsCommand());
-
-			if (result == -1)
-			{
-				return new StatusCodeResult(StatusCodes.Status500InternalServerError);
-			}
-
-			return Ok();
-		}
 	}
 }
