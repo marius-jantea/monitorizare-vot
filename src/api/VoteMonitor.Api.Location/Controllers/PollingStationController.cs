@@ -15,106 +15,120 @@ using VoteMonitor.Api.Location.Services;
 
 namespace VoteMonitor.Api.Location.Controllers
 {
-    /// <summary>
-    /// Controller responsible for interacting with the polling stations - PollingStationInfo 
-    /// </summary>
-    [Route("api/v1/polling-station")]
-    public class PollingStationController : Controller
-    {
-        private readonly IMapper _mapper;
-        private readonly IMediator _mediator;
-        private readonly IFileLoader _fileLoader;
+	/// <summary>
+	/// Controller responsible for interacting with the polling stations - PollingStationInfo 
+	/// </summary>
+	[Route("api/v1/polling-station")]
+	public class PollingStationController : Controller
+	{
+		private readonly IMapper _mapper;
+		private readonly IMediator _mediator;
+		private readonly IFileLoader _fileLoader;
 
-        public PollingStationController(IMediator mediator, IMapper mapper, IFileLoader loader)
-        {
-            _mapper = mapper;
-            _mediator = mediator;
-            _fileLoader = loader;
-        }
+		public PollingStationController(IMediator mediator, IMapper mapper, IFileLoader loader)
+		{
+			_mapper = mapper;
+			_mediator = mediator;
+			_fileLoader = loader;
+		}
 
-        /// <summary>
-        /// This method gets called when the observer saves the info regarding the arrival time, leave time, urban area, BESV president
-        /// These info come together with the polling station id.
-        /// </summary>
-        /// <param name="pollingStationInfo">Info about the polling station and its' allocated observer</param>
-        /// <returns></returns>
-        [HttpPost]
-        public async Task<IAsyncResult> Register([FromBody] AddPollingStationInfo pollingStationInfo)
-        {
-            if (!ModelState.IsValid)
-            {
-                return this.ResultAsync(HttpStatusCode.BadRequest, ModelState);
-            }
+		/// <summary>
+		/// This method gets called when the observer saves the info regarding the arrival time, leave time, urban area, BESV president
+		/// These info come together with the polling station id.
+		/// </summary>
+		/// <param name="pollingStationInfo">Info about the polling station and its' allocated observer</param>
+		/// <returns></returns>
+		[HttpPost]
+		public async Task<IAsyncResult> Register([FromBody] AddPollingStationInfo pollingStationInfo)
+		{
+			if (!ModelState.IsValid)
+			{
+				return this.ResultAsync(HttpStatusCode.BadRequest, ModelState);
+			}
 
-            var command = _mapper.Map<RegisterPollingStationCommand>(pollingStationInfo);
+			var command = _mapper.Map<RegisterPollingStationCommand>(pollingStationInfo);
 
-            // TODO[DH] get the actual IdObservator from token
-            command.IdObserver = int.Parse(User.Claims.First(c => c.Type == ClaimsHelper.ObserverIdProperty).Value);
+			// TODO[DH] get the actual IdObservator from token
+			command.IdObserver = int.Parse(User.Claims.First(c => c.Type == ClaimsHelper.ObserverIdProperty).Value);
 
-            var result = await _mediator.Send(command);
+			var result = await _mediator.Send(command);
 
-            return this.ResultAsync(result < 0 ? HttpStatusCode.NotFound : HttpStatusCode.OK);
-        }
+			return this.ResultAsync(result < 0 ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+		}
 
-        /// <summary>
-        /// This method gets called when updating information about the leave time.
-        /// These info come together with the polling station id.
-        /// </summary>
-        /// <param name="pollingStationInfo">Polling station id, county code, leave time</param>
-        /// <returns></returns>
-        [HttpPut]
-        public async Task<IAsyncResult> Update([FromBody] UpdatePollingStationInfo pollingStationInfo)
-        {
-            if (!ModelState.IsValid)
-            {
-                return this.ResultAsync(HttpStatusCode.BadRequest, ModelState);
-            }
+		/// <summary>
+		/// This method gets called when updating information about the leave time.
+		/// These info come together with the polling station id.
+		/// </summary>
+		/// <param name="pollingStationInfo">Polling station id, county code, leave time</param>
+		/// <returns></returns>
+		[HttpPut]
+		public async Task<IAsyncResult> Update([FromBody] UpdatePollingStationInfo pollingStationInfo)
+		{
+			if (!ModelState.IsValid)
+			{
+				return this.ResultAsync(HttpStatusCode.BadRequest, ModelState);
+			}
 
-            var idSectie = await _mediator.Send(_mapper.Map<PollingStationQuery>(pollingStationInfo));
-            if (idSectie < 0)
-            {
-                return this.ResultAsync(HttpStatusCode.NotFound);
-            }
+			var idSectie = await _mediator.Send(_mapper.Map<PollingStationQuery>(pollingStationInfo));
+			if (idSectie < 0)
+			{
+				return this.ResultAsync(HttpStatusCode.NotFound);
+			}
 
-            var command = _mapper.Map<UpdatePollingSectionCommand>(pollingStationInfo);
+			var command = _mapper.Map<UpdatePollingSectionCommand>(pollingStationInfo);
 
-            command.IdObserver = this.GetIdObserver();
-            command.IdPollingStation = idSectie;
+			command.IdObserver = this.GetIdObserver();
+			command.IdPollingStation = idSectie;
 
-            var result = await _mediator.Send(command);
+			var result = await _mediator.Send(command);
 
-            return this.ResultAsync(result < 0 ? HttpStatusCode.NotFound : HttpStatusCode.OK);
-        }
+			return this.ResultAsync(result < 0 ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+		}
 
-        /// <summary>
-        /// Gets the polling stations' allocated per county
-        /// </summary>
-        /// <returns>{ "countyCode": "numberOfPollingStationsAssigned", ... }</returns>
-        [HttpGet]
-        [Produces(typeof(IEnumerable<CountyPollingStationLimit>))]
-        public async Task<IActionResult> PollingStationsLimits(bool? diaspora)
-        {
-            var result = await _mediator.Send(new PollingStationsAssignmentQuery(diaspora));
-            return Ok(result);
-        }
+		/// <summary>
+		/// Gets the polling stations' allocated per county
+		/// </summary>
+		/// <returns>{ "countyCode": "numberOfPollingStationsAssigned", ... }</returns>
+		[HttpGet]
+		[Produces(typeof(IEnumerable<CountyPollingStationLimit>))]
+		public async Task<IActionResult> PollingStationsLimits(bool? diaspora)
+		{
+			var result = await _mediator.Send(new PollingStationsAssignmentQuery(diaspora));
+			return Ok(result);
+		}
 
-        [HttpPost("import")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> ImportFormatFile(IFormFile file)
-        {
-            if (!_fileLoader.ValidateFile(file))
-            {
-                return UnprocessableEntity();
-            }
+		[HttpPost("import")]
+		[Consumes("multipart/form-data")]
+		public async Task<IActionResult> ImportFormatFile(IFormFile file)
+		{
+			if (!_fileLoader.ValidateFile(file))
+			{
+				return UnprocessableEntity();
+			}
 
-            var result = await _mediator.Send(new PollingStationCommand(_fileLoader.ImportFileAsync(file).Result));
+			var result = await _mediator.Send(new PollingStationCommand(_fileLoader.ImportFileAsync(file).Result));
 
-            if (result == -1)
-            {
-                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
-            }
+			if (result == -1)
+			{
+				return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+			}
 
-            return Ok();
-        }
-    }
+			return Ok();
+		}
+
+
+		[HttpDelete("clearAll")]
+		public async Task<IActionResult> ClearAll()
+		{
+			var result = await _mediator.Send(new ClearAllPollingStationsCommand());
+
+			if (result == -1)
+			{
+				return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+			}
+
+			return Ok();
+		}
+	}
 }
