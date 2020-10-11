@@ -58,10 +58,9 @@ namespace VoteMonitor.Api.Location.Handlers
                             continue;
                         }
 
-                        var maxPollingStation = _context.PollingStations
+                        county.NumberOfPollingStations = _context.PollingStations
                             .Where(p => p.IdCounty == county.Id)
-                            .Max(p => p.Number);
-                        county.NumberOfPollingStations = maxPollingStation;
+                            .Count();
                         _context.Counties.Update(county);
                     }
 
